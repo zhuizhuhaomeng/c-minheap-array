@@ -7,11 +7,11 @@
 #include "heap.h"
 
 // This is a comparison function that treats keys as signed ints
-int compare_int_keys(register void *key1, register void *key2)
+int compare_int_keys(void *key1, void *key2)
 {
     // Cast them as int* and read them in
-    register int key1_v = *((int *) key1);
-    register int key2_v = *((int *) key2);
+    int key1_v = *((int *) key1);
+    int key2_v = *((int *) key2);
 
     // Perform the comparison
     if (key1_v < key2_v) {
@@ -28,15 +28,16 @@ int compare_int_keys(register void *key1, register void *key2)
 
 int main(int argc, char **argv)
 {
-
-    // Create the heap
+    int i;
     heap h;
-    int count = 10000; // 10M
+    int count = 10000;
+    heap_cmp_func cmp = compare_int_keys;
 
-    heap_create(&h, count, compare_int_keys);
+    heap_create(&h, count, cmp);
 
     // Allocate a key and value
     int *key = (int *) malloc(count * sizeof(int));
+    int *key2 = (int *) malloc(count * sizeof(int));
 
     // Initialize the first key
     unsigned int val = 42;
@@ -46,15 +47,27 @@ int main(int argc, char **argv)
     int min = INT_MAX;
 
     // Use a pseudo-random generator for the other keys
-    for (int i = 0; i < count; i++) {
-        *(key + i) = rand();
-        //printf("i = %d,  val = %d\n", i, *(key + i));
-
+    for (i = 0; i < count; i++) {
+        *(key + i) = rand() % 1000;
         // Check for a new min
-        if (*(key + i) < min) min = *(key + i);
+        if (*(key + i) < min) {
+            min = *(key + i);
+        }
 
-        // Insert into the heap
-        heap_insert(&h, key + i);
+        h.table[i].val = key + i;
+    }
+
+    h.active_entries = i;
+
+    heap_build(&h);
+
+    for (i = 0; i < count; i++) {
+        *(key2 + i) = rand() % 1000;
+
+        if (cmp(key2 + i, h.table[0].val) > 0) {
+            h.table[0].val = key2 + i;
+            heapify(&h, 0);
+        }
     }
 
     // Get the minimum
